@@ -94,6 +94,8 @@ public class TestLevel implements Screen {
     public void update(float dt) {
         tiledMapRenderer.setView(camera);
         camera.update();
+        player.update(dt);
+
     }
 
 
@@ -109,6 +111,9 @@ public class TestLevel implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         tiledMapRenderer.render();
         game.batch.setProjectionMatrix(camera.combined);
+        game.batch.begin();
+        player.render(game.batch, delta);
+        game.batch.end();
 
     }
 
@@ -134,6 +139,7 @@ public class TestLevel implements Screen {
 
     @Override
     public void dispose() {
+        player.disposeTextures();
 
     }
 }

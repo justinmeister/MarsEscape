@@ -20,6 +20,6 @@
   <object x="1120" y="288" width="128" height="32"/>
  </objectgroup>
  <objectgroup name="spriteStartPosition" width="240" height="13">
-  <object type="player" x="128" y="288" width="32" height="32"/>
+  <object name="player_start_pos" type="player" x="128" y="352" width="32" height="32"/>
  </objectgroup>
 </map>
