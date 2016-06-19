@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" width="240" height="13" tilewidth="32" tileheight="32">
+ <tileset firstgid="1" name="Ground" tilewidth="32" tileheight="32">
+  <image source="marsGround.png" width="32" height="32"/>
+ </tileset>
+ <tileset firstgid="2" name="Sky" tilewidth="32" tileheight="32">
+  <image source="marsSky.png" width="32" height="32"/>
+ </tileset>
+ <layer name="Tile Layer 1" width="240" height="13">
+  <data encoding="base64" compression="zlib">
+   eJzt1iECACAMA7Gy/z8a9DxDEBF9la0kBQAAAAAAAAAAx2pe7wEAgK5/1hume/CLDbSgF3A=
+  </data>
+ </layer>
+ <objectgroup name="ground" width="240" height="13">
+  <object x="768" y="192" width="96">
+   <ellipse/>
+  </object>
+  <object x="0" y="384" width="800" height="32"/>
+  <object x="896" y="384" width="672" height="32"/>
+  <object x="1120" y="288" width="128" height="32"/>
+ </objectgroup>
+ <objectgroup name="spriteStartPosition" width="240" height="13">
+  <object type="player" x="128" y="288" width="32" height="32"/>
+ </objectgroup>
+</map>
