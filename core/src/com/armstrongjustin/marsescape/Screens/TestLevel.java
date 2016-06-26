@@ -106,11 +106,11 @@ public class TestLevel implements Screen {
 
     @Override
     public void render(float delta) {
-        update(delta);
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        tiledMapRenderer.render();
         game.batch.setProjectionMatrix(camera.combined);
+        update(delta);
+        tiledMapRenderer.render();
         game.batch.begin();
         player.render(game.batch, delta);
         game.batch.end();

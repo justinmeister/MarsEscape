@@ -9,21 +9,34 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 
+import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+
 public class Player extends Sprite {
 
     final String IDLE = "idle";
     final String RUN = "run";
     final String JUMP = "jump";
     final String PLAYER_SHEET = "playerSheet.png";
+    final String RIGHT = "right";
+    final String LEFT = "left";
 
     public String state;
     Texture sheet;
-    TextureRegion[] idleFrames;
-    TextureRegion[] runFrames;
+    ArrayList<TextureRegion> animationFrames = new ArrayList<TextureRegion>();
 
-    Animation idleAnimation;
-    Animation runAnimation;
-    public Animation animation;
+    ArrayList<TextureRegion> rightIdleFrames = new ArrayList<TextureRegion>();
+    ArrayList<TextureRegion> leftIdleFrames = new ArrayList<TextureRegion>();
+    HashMap<String, ArrayList<TextureRegion>> idleFrames = new HashMap<String, ArrayList<TextureRegion>>();
+
+
+    ArrayList<TextureRegion> leftWalkFrames = new ArrayList<TextureRegion>();
+    ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
+    HashMap<String, ArrayList<TextureRegion>> walkingFrames = new HashMap<String, ArrayList<TextureRegion>>();
+
 
     Boolean facingRight;
 
@@ -34,37 +47,61 @@ public class Player extends Sprite {
         state = IDLE;
         facingRight = true;
 
-        makeAnimations();
+        makeAnimationFrames();
         enterIdle();
 
     }
 
-    private void makeAnimations(){
+    private void makeAnimationFrames(){
         sheet = new Texture(PLAYER_SHEET);
+        sheet.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
-        TextureRegion frame1 = new TextureRegion(sheet, 0, 0, 32, 32);
-        TextureRegion frame2 = new TextureRegion(sheet, 32, 0, 32, 32);
-        TextureRegion frame3 = new TextureRegion(sheet, 64, 0, 32, 32);
-        idleFrames = new TextureRegion[1];
-        idleFrames[0] = frame1;
+        TextureRegion idle0 = new TextureRegion(sheet, 0, 0, 32, 32);
+        rightIdleFrames.add(idle0);
+        makeFlippedFrameList(rightIdleFrames, leftIdleFrames);
+        idleFrames.put(RIGHT,rightIdleFrames);
+        idleFrames.put(LEFT, leftIdleFrames);
 
-        runFrames = new TextureRegion[2];
-        runFrames[0] = frame2;
-        runFrames[1] = frame3;
-
-        idleAnimation = new Animation(1f/15f, idleFrames);
-        runAnimation = new Animation(1f/10f, runFrames);
+        TextureRegion walk0 = new TextureRegion(sheet, 32, 0, 32, 32);
+        TextureRegion walk1 = new TextureRegion(sheet, 64, 0, 32, 32);
+        rightWalkFrames.add(walk0);
+        rightWalkFrames.add(walk1);
+        makeFlippedFrameList(rightWalkFrames, leftWalkFrames);
+        walkingFrames.put(RIGHT, rightWalkFrames);
+        walkingFrames.put(LEFT, leftWalkFrames);
 
     }
 
+
+
+    private void makeFlippedFrameList(ArrayList<TextureRegion> initialList, ArrayList<TextureRegion> flippedList) {
+        for (TextureRegion frame: initialList) {
+            TextureRegion flippedFrame = new TextureRegion(frame);
+            flippedFrame.flip(true, false);
+            flippedList.add(flippedFrame);
+        }
+    }
+
+
     private void enterIdle() {
         state = IDLE;
-        animation = idleAnimation;
+        setAnimationFrames(idleFrames);
     }
 
     private void enterRun() {
         state = RUN;
-        animation = runAnimation;
+        setAnimationFrames(walkingFrames);
+    }
+
+    private void setAnimationFrames(HashMap<String, ArrayList<TextureRegion>> frameMap) {
+        if (facingRight) {
+            animationFrames = frameMap.get(RIGHT);
+        }
+        else {
+            animationFrames = frameMap.get(LEFT);
+        }
+
+    }
     }
 
     public void update(float dt) {
@@ -73,13 +110,12 @@ public class Player extends Sprite {
         }
         else if (state.equals(RUN)) {
             running();
+            translateX(100.0f * dt);
         }
 
         else if (state.equals(JUMP)) {
             jumping();
         }
-
-
 
     }
 
@@ -127,6 +163,7 @@ public class Player extends Sprite {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             facingRight = true;
             flipFrameCheck();
+
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
