@@ -92,10 +92,21 @@ public class TestLevel implements Screen {
     }
 
     public void update(float dt) {
-        tiledMapRenderer.setView(camera);
-        camera.update();
         player.update(dt);
+        updateCameraPosition(dt);
+        tiledMapRenderer.setView(camera);
 
+    }
+
+    public void updateCameraPosition(float dt) {
+
+        if (player.getX() > camera.position.x) {
+            float newXPosition = camera.position.x+(player.xVelocity*dt);
+            newXPosition = Math.round(newXPosition);
+            Gdx.app.log("new camera position: ", Float.toString(newXPosition));
+            camera.position.set(newXPosition, camera.position.y, 0);
+        }
+        camera.update();
     }
 
 
@@ -106,10 +117,10 @@ public class TestLevel implements Screen {
 
     @Override
     public void render(float delta) {
+        update(delta);
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.batch.setProjectionMatrix(camera.combined);
-        update(delta);
         tiledMapRenderer.render();
         game.batch.begin();
         player.render(game.batch, delta);

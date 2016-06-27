@@ -23,6 +23,9 @@ public class Player extends Sprite {
     final String PLAYER_SHEET = "playerSheet.png";
     final String RIGHT = "right";
     final String LEFT = "left";
+    final int NORMAL_ACCELERATION = 20;
+    final float GROUND_DECELERATION = 10f;
+    final int MAX_XVELOCITY = 400;
 
     public String state;
     Texture sheet;
@@ -39,6 +42,8 @@ public class Player extends Sprite {
 
     TextureRegion currentFrame;
     Boolean facingRight;
+
+    public float xVelocity;
 
     private int frameIndex = 0;
 
@@ -87,6 +92,7 @@ public class Player extends Sprite {
 
     private void enterIdle() {
         animationTimer = System.currentTimeMillis();
+        xVelocity = 0;
         state = IDLE;
         setAnimationDirection(idleFrames);
     }
@@ -124,11 +130,23 @@ public class Player extends Sprite {
             jumping();
         }
 
+        updatePosition(dt);
+
     }
+
+    private void updatePosition(float dt) {
+        float newXPosition = (float) Math.round(getX() + xVelocity * dt);
+        setX(newXPosition);
+
+    }
+
 
     public void render(Batch batch, float dt) {
 
-        batch.draw(currentFrame, getX(), getY());
+        float xPos = (float) Math.round(getX());
+        float yPos = (float) Math.round(getY());
+
+        batch.draw(currentFrame, xPos, yPos);
     }
 
     private void idling() {
@@ -160,18 +178,51 @@ public class Player extends Sprite {
                 setAnimationDirection(walkingFrames);
             }
 
-            translateX(100 * dt);
+            if (xVelocity > MAX_XVELOCITY) {
+                xVelocity = MAX_XVELOCITY;
+            }
+            else {
+                xVelocity += NORMAL_ACCELERATION;
+
+            }
 
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+        else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             if (facingRight) {
                 facingRight = false;
                 setAnimationDirection(walkingFrames);
             }
 
-            translateX(-100 * dt);
+            if (xVelocity < MAX_XVELOCITY * -1) {
+                xVelocity = MAX_XVELOCITY * -1;
+            }
+            else {
+                xVelocity -= NORMAL_ACCELERATION;
+            }
+
         }
+
+        else {
+            if (facingRight) {
+                if (xVelocity > 0) {
+                    xVelocity -= GROUND_DECELERATION;
+                }
+                else {
+                    enterIdle();
+                }
+            }
+            else {
+                if (xVelocity < 0) {
+                    xVelocity += GROUND_DECELERATION;
+                }
+                else {
+                    enterIdle();
+                }
+            }
+        }
+
+
 
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
             enterIdle();
