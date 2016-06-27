@@ -37,10 +37,12 @@ public class Player extends Sprite {
     ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
     HashMap<String, ArrayList<TextureRegion>> walkingFrames = new HashMap<String, ArrayList<TextureRegion>>();
 
-
+    TextureRegion currentFrame;
     Boolean facingRight;
 
-    Float elapsedTime = 0f;
+    private int frameIndex = 0;
+
+    private long animationTimer = 0;
 
     public Player (Vector2 startLocation) {
         setPosition(startLocation.x, startLocation.y);
@@ -84,16 +86,21 @@ public class Player extends Sprite {
 
 
     private void enterIdle() {
+        animationTimer = System.currentTimeMillis();
         state = IDLE;
-        setAnimationFrames(idleFrames);
+        setAnimationDirection(idleFrames);
     }
 
     private void enterRun() {
+        animationTimer = System.currentTimeMillis();
         state = RUN;
-        setAnimationFrames(walkingFrames);
+        setAnimationDirection(walkingFrames);
     }
 
-    private void setAnimationFrames(HashMap<String, ArrayList<TextureRegion>> frameMap) {
+    private void setAnimationDirection(HashMap<String, ArrayList<TextureRegion>> frameMap) {
+        frameIndex = 0;
+        animationTimer = System.currentTimeMillis();
+
         if (facingRight) {
             animationFrames = frameMap.get(RIGHT);
         }
@@ -101,16 +108,16 @@ public class Player extends Sprite {
             animationFrames = frameMap.get(LEFT);
         }
 
+        currentFrame = animationFrames.get(frameIndex);
     }
-    }
+
 
     public void update(float dt) {
         if (state.equals(IDLE)) {
             idling();
         }
         else if (state.equals(RUN)) {
-            running();
-            translateX(100.0f * dt);
+            running(dt);
         }
 
         else if (state.equals(JUMP)) {
@@ -120,62 +127,83 @@ public class Player extends Sprite {
     }
 
     public void render(Batch batch, float dt) {
-        elapsedTime += dt;
-
-        TextureRegion currentFrame = animation.getKeyFrame(elapsedTime, true);
-
 
         batch.draw(currentFrame, getX(), getY());
     }
 
     private void idling() {
+        handleIdleAnimation();
+
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             facingRight = false;
-            flipFrameCheck();
             enterRun();
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             facingRight = true;
-            flipFrameCheck();
             enterRun();
         }
     }
 
-    private void flipFrameCheck(){
-        for (TextureRegion region : animation.getKeyFrames()) {
+    private void handleIdleAnimation() {
+        int frameIndex = 0;
+        currentFrame = animationFrames.get(frameIndex);
+
+    }
+
+    private void running(float dt) {
+        handleRunAnimation();
+
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            if (!facingRight) {
+                facingRight = true;
+                setAnimationDirection(walkingFrames);
+            }
+
+            translateX(100 * dt);
+
+        }
+
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             if (facingRight) {
-                if (region.isFlipX()) {
-                    region.flip(true, false);
-                }
-            }
-            else {
-                if (!region.isFlipX()) {
-                    region.flip(true, false);
-                }
+                facingRight = false;
+                setAnimationDirection(walkingFrames);
             }
 
-        }
-    }
-
-
-    private void running() {
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            facingRight = true;
-            flipFrameCheck();
-
-        }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            facingRight = false;
-            flipFrameCheck();
+            translateX(-100 * dt);
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
             enterIdle();
-            flipFrameCheck();
         }
+
     }
+
+    private void handleRunAnimation() {
+        long currentTime = System.currentTimeMillis();
+        long elaspsedTime = currentTime - animationTimer;
+        int numberOfFrames = animationFrames.size();
+
+        int timeBetweenFrames = 100;
+
+        if (elaspsedTime >= timeBetweenFrames) {
+            if (frameIndex >= (numberOfFrames-1)) {
+                frameIndex = 0;
+            }
+            else {
+                frameIndex++;
+            }
+
+            animationTimer = currentTime;
+            currentFrame = animationFrames.get(frameIndex);
+        }
+
+
+    }
+
+
+
+
 
     private void jumping() {}
 
