@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
-import com.sun.imageio.plugins.common.ReaderUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +16,7 @@ public class Player extends Sprite {
     final String IDLE = "idle";
     final String WALK = "walk";
     final String JUMP = "jump";
+    final String CROUCH = "crouch";
     final String PLAYER_SHEET = "playerSheet.png";
     final String RIGHT = "right";
     final String LEFT = "left";
@@ -26,87 +26,114 @@ public class Player extends Sprite {
     final int INITIAL_JUMP_VELOCITY = 400;
     final float GRAVITY = 15f;
 
-    public String state;
-    Texture sheet;
     ArrayList<TextureRegion> animationFrames = new ArrayList<TextureRegion>();
-
-    ArrayList<TextureRegion> rightIdleFrames = new ArrayList<TextureRegion>();
-    ArrayList<TextureRegion> leftIdleFrames = new ArrayList<TextureRegion>();
     HashMap<String, ArrayList<TextureRegion>> idleFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    HashMap<String, ArrayList<TextureRegion>> walkFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    HashMap<String, ArrayList<TextureRegion>> jumpframes = new HashMap<String, ArrayList<TextureRegion>>();
+    HashMap<String, ArrayList<TextureRegion>> crouchFrames = new HashMap<String, ArrayList<TextureRegion>>();
 
-
-    ArrayList<TextureRegion> leftWalkFrames = new ArrayList<TextureRegion>();
-    ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
-    HashMap<String, ArrayList<TextureRegion>> walkingFrames = new HashMap<String, ArrayList<TextureRegion>>();
-
-    ArrayList<TextureRegion> rightJumpFrames = new ArrayList<TextureRegion>();
-    ArrayList<TextureRegion> leftJumpFrames = new ArrayList<TextureRegion>();
-    HashMap<String, ArrayList<TextureRegion>> jumpingFrames = new HashMap<String, ArrayList<TextureRegion>>();
-
-    TextureRegion currentFrame;
-    Boolean facingRight;
-
+    private TextureRegion currentFrame;
+    private Boolean facingRight;
     public float xVelocity;
     public float yVelocity;
-
     private int frameIndex = 0;
-
     private long animationTimer = 0;
+    public String state;
 
     public Player (Vector2 startLocation) {
         setPosition(startLocation.x, startLocation.y);
-        state = IDLE;
         facingRight = true;
-
         makeAnimationFrames();
         enterIdle();
-
     }
 
     private void makeAnimationFrames(){
-        sheet = new Texture(PLAYER_SHEET);
+        Texture sheet = new Texture(PLAYER_SHEET);
         sheet.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
-        TextureRegion idle0 = new TextureRegion(sheet, 0, 0, 32, 32);
-        rightIdleFrames.add(idle0);
-        makeFlippedFrameList(rightIdleFrames, leftIdleFrames);
-        idleFrames.put(RIGHT,rightIdleFrames);
-        idleFrames.put(LEFT, leftIdleFrames);
-
-        TextureRegion walk0 = new TextureRegion(sheet, 32, 0, 32, 32);
-        TextureRegion walk1 = new TextureRegion(sheet, 64, 0, 32, 32);
-        rightWalkFrames.add(walk0);
-        rightWalkFrames.add(walk1);
-        makeFlippedFrameList(rightWalkFrames, leftWalkFrames);
-        walkingFrames.put(RIGHT, rightWalkFrames);
-        walkingFrames.put(LEFT, leftWalkFrames);
-
-        rightJumpFrames.add(walk0);
-        makeFlippedFrameList(rightJumpFrames, leftJumpFrames);
-        jumpingFrames.put(RIGHT, rightJumpFrames);
-        jumpingFrames.put(LEFT, leftJumpFrames);
+        idleFrames = makeIdleFramesMap(sheet);
+        walkFrames = makeWalkFramesMap(sheet);
+        jumpframes = makeJumpFramesMap(sheet);
+        crouchFrames = makeCrouchFramesMap(sheet);
     }
 
-    private void makeFlippedFrameList(ArrayList<TextureRegion> initialList, ArrayList<TextureRegion> flippedList) {
+
+    private HashMap<String, ArrayList<TextureRegion>> makeIdleFramesMap(Texture sheet) {
+        ArrayList<TextureRegion> rightIdleFrames = new ArrayList<TextureRegion>();
+        TextureRegion idle0 = new TextureRegion(sheet, 0, 0, 32, 32);
+        rightIdleFrames.add(idle0);
+
+        ArrayList<TextureRegion> leftIdleFrames = makeFlippedFrameList(rightIdleFrames);
+        HashMap<String, ArrayList<TextureRegion>> frameMap = new HashMap<String, ArrayList<TextureRegion>>();
+        frameMap.put(RIGHT,rightIdleFrames);
+        frameMap.put(LEFT, leftIdleFrames);
+
+        return frameMap;
+    }
+
+    private HashMap<String, ArrayList<TextureRegion>> makeWalkFramesMap(Texture sheet) {
+        TextureRegion walk0 = new TextureRegion(sheet, 32, 0, 32, 32);
+        TextureRegion walk1 = new TextureRegion(sheet, 64, 0, 32, 32);
+        ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
+        rightWalkFrames.add(walk0);
+        rightWalkFrames.add(walk1);
+        ArrayList<TextureRegion> leftWalkFrames = makeFlippedFrameList(rightWalkFrames);
+        HashMap<String, ArrayList<TextureRegion>> frameMap = new HashMap<String, ArrayList<TextureRegion>>();
+        frameMap.put(RIGHT, rightWalkFrames);
+        frameMap.put(LEFT, leftWalkFrames);
+
+        return frameMap;
+    }
+
+    private HashMap<String, ArrayList<TextureRegion>> makeJumpFramesMap(Texture sheet) {
+        ArrayList<TextureRegion> rightJumpFrames = new ArrayList<TextureRegion>();
+        TextureRegion jump0 = new TextureRegion(sheet, 32, 0, 32, 32);
+        rightJumpFrames.add(jump0);
+        ArrayList<TextureRegion> leftJumpFrames = makeFlippedFrameList(rightJumpFrames);
+        HashMap<String, ArrayList<TextureRegion>> frameMap = new HashMap<String, ArrayList<TextureRegion>>();
+        frameMap.put(RIGHT, rightJumpFrames);
+        frameMap.put(LEFT, leftJumpFrames);
+
+        return frameMap;
+    }
+
+    private HashMap<String, ArrayList<TextureRegion>> makeCrouchFramesMap(Texture sheet) {
+        ArrayList<TextureRegion> rightCrouchFrames = new ArrayList<TextureRegion>();
+        TextureRegion crouch0 = new TextureRegion(sheet, 96, 0, 32, 32);
+        rightCrouchFrames.add(crouch0);
+        ArrayList<TextureRegion> leftCrouchFrames = makeFlippedFrameList(rightCrouchFrames);
+
+        HashMap<String, ArrayList<TextureRegion>> frameMap = new HashMap<String, ArrayList<TextureRegion>>();
+        frameMap.put(RIGHT, rightCrouchFrames);
+        frameMap.put(LEFT, leftCrouchFrames);
+
+        return frameMap;
+    }
+
+    private ArrayList<TextureRegion> makeFlippedFrameList(ArrayList<TextureRegion> initialList) {
+        ArrayList<TextureRegion> flippedList = new ArrayList<TextureRegion>();
+
         for (TextureRegion frame: initialList) {
             TextureRegion flippedFrame = new TextureRegion(frame);
             flippedFrame.flip(true, false);
             flippedList.add(flippedFrame);
         }
+
+        return flippedList;
     }
 
 
     private void enterIdle() {
+        state = IDLE;
         xVelocity = 0;
         yVelocity = 0;
-        state = IDLE;
         setAnimationDirection(idleFrames);
     }
 
     private void enterWalk() {
         state = WALK;
         yVelocity = 0;
-        setAnimationDirection(walkingFrames);
+        setAnimationDirection(walkFrames);
     }
 
     private void setAnimationDirection(HashMap<String, ArrayList<TextureRegion>> frameMap) {
@@ -129,11 +156,15 @@ public class Player extends Sprite {
             idling();
         }
         else if (state.equals(WALK)) {
-            walking(dt);
+            walking();
         }
 
         else if (state.equals(JUMP)) {
             jumping();
+        }
+
+        else if (state.equals(CROUCH)) {
+            crouching();
         }
 
         updatePosition(dt);
@@ -179,31 +210,78 @@ public class Player extends Sprite {
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
             enterJump();
         }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            enterCrouch();
+        }
+    }
+
+    private void enterCrouch() {
+        state = CROUCH;
+        setAnimationDirection(crouchFrames);
     }
 
     private void enterJump() {
-        animationTimer = System.currentTimeMillis();
         state = JUMP;
         yVelocity = INITIAL_JUMP_VELOCITY;
-        setAnimationDirection(jumpingFrames);
+        setAnimationDirection(jumpframes);
     }
 
     private void handleIdleAnimation() {
         int frameIndex = 0;
         currentFrame = animationFrames.get(frameIndex);
-
     }
 
-    private void walking (float dt) {
+    private void handleCrouchAnimation() {
+        int frameIndex = 0;
+        currentFrame = animationFrames.get(frameIndex);
+    }
+
+    private void walking () {
         handleWalkAnimation();
         checkInputDuringWalk();
+        checkIfStopped();
+    }
+
+    private void checkIfStopped() {
+        if (xVelocity == 0) {
+            enterIdle();
+        }
+    }
+
+    private void crouching () {
+        handleCrouchAnimation();
+        checkInputDuringCrouch();
+        applyGroundFriction();
+    }
+
+    private void checkInputDuringCrouch() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+            if (!facingRight) {
+                facingRight = true;
+                setAnimationDirection(crouchFrames);
+            }
+            enterWalk();
+        }
+        else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+            if (facingRight) {
+                facingRight = false;
+                setAnimationDirection(crouchFrames);
+            }
+            enterWalk();
+        }
+
+        else if (!(Gdx.input.isKeyPressed(Input.Keys.DOWN))) {
+            enterIdle();
+        }
+
     }
 
     private void checkInputDuringWalk() {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             if (!facingRight) {
                 facingRight = true;
-                setAnimationDirection(walkingFrames);
+                setAnimationDirection(walkFrames);
             }
 
             if (xVelocity > MAX_XVELOCITY) {
@@ -217,7 +295,7 @@ public class Player extends Sprite {
         else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             if (facingRight) {
                 facingRight = false;
-                setAnimationDirection(walkingFrames);
+                setAnimationDirection(walkFrames);
             }
 
             if (xVelocity < MAX_XVELOCITY * -1) {
@@ -237,7 +315,7 @@ public class Player extends Sprite {
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            enterIdle();
+            enterCrouch();
         }
     }
 
@@ -247,7 +325,7 @@ public class Player extends Sprite {
                     xVelocity -= GROUND_DECELERATION;
                 }
                 else {
-                    enterIdle();
+                    xVelocity = 0;
                 }
             }
             else {
@@ -255,7 +333,7 @@ public class Player extends Sprite {
                     xVelocity += GROUND_DECELERATION;
                 }
                 else {
-                    enterIdle();
+                    xVelocity = 0;
                 }
             }
     }
@@ -296,7 +374,7 @@ public class Player extends Sprite {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             if (!facingRight) {
                 facingRight = true;
-                setAnimationDirection(jumpingFrames);
+                setAnimationDirection(jumpframes);
             }
 
             if (xVelocity > MAX_XVELOCITY) {
@@ -310,7 +388,7 @@ public class Player extends Sprite {
         else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             if (facingRight) {
                 facingRight = false;
-                setAnimationDirection(jumpingFrames);
+                setAnimationDirection(jumpframes);
             }
 
             if (xVelocity < MAX_XVELOCITY * -1) {
@@ -329,6 +407,5 @@ public class Player extends Sprite {
     }
 
     public void disposeTextures() {
-        sheet.dispose();
     }
 }
