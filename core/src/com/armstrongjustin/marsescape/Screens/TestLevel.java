@@ -103,7 +103,6 @@ public class TestLevel implements Screen {
         if (player.getX() > camera.position.x) {
             float newXPosition = camera.position.x+(player.xVelocity*dt);
             newXPosition = Math.round(newXPosition);
-            Gdx.app.log("new camera position: ", Float.toString(newXPosition));
             camera.position.set(newXPosition, camera.position.y, 0);
         }
         camera.update();

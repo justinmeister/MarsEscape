@@ -3,22 +3,19 @@ package com.armstrongjustin.marsescape;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.sun.imageio.plugins.common.ReaderUtil;
 
 import java.util.ArrayList;
-import java.util.Dictionary;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Map;
 
 public class Player extends Sprite {
 
     final String IDLE = "idle";
-    final String RUN = "run";
+    final String WALK = "walk";
     final String JUMP = "jump";
     final String PLAYER_SHEET = "playerSheet.png";
     final String RIGHT = "right";
@@ -26,6 +23,8 @@ public class Player extends Sprite {
     final int NORMAL_ACCELERATION = 20;
     final float GROUND_DECELERATION = 10f;
     final int MAX_XVELOCITY = 400;
+    final int INITIAL_JUMP_VELOCITY = 400;
+    final float GRAVITY = 15f;
 
     public String state;
     Texture sheet;
@@ -40,10 +39,15 @@ public class Player extends Sprite {
     ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
     HashMap<String, ArrayList<TextureRegion>> walkingFrames = new HashMap<String, ArrayList<TextureRegion>>();
 
+    ArrayList<TextureRegion> rightJumpFrames = new ArrayList<TextureRegion>();
+    ArrayList<TextureRegion> leftJumpFrames = new ArrayList<TextureRegion>();
+    HashMap<String, ArrayList<TextureRegion>> jumpingFrames = new HashMap<String, ArrayList<TextureRegion>>();
+
     TextureRegion currentFrame;
     Boolean facingRight;
 
     public float xVelocity;
+    public float yVelocity;
 
     private int frameIndex = 0;
 
@@ -77,9 +81,11 @@ public class Player extends Sprite {
         walkingFrames.put(RIGHT, rightWalkFrames);
         walkingFrames.put(LEFT, leftWalkFrames);
 
+        rightJumpFrames.add(walk0);
+        makeFlippedFrameList(rightJumpFrames, leftJumpFrames);
+        jumpingFrames.put(RIGHT, rightJumpFrames);
+        jumpingFrames.put(LEFT, leftJumpFrames);
     }
-
-
 
     private void makeFlippedFrameList(ArrayList<TextureRegion> initialList, ArrayList<TextureRegion> flippedList) {
         for (TextureRegion frame: initialList) {
@@ -91,15 +97,15 @@ public class Player extends Sprite {
 
 
     private void enterIdle() {
-        animationTimer = System.currentTimeMillis();
         xVelocity = 0;
+        yVelocity = 0;
         state = IDLE;
         setAnimationDirection(idleFrames);
     }
 
-    private void enterRun() {
-        animationTimer = System.currentTimeMillis();
-        state = RUN;
+    private void enterWalk() {
+        state = WALK;
+        yVelocity = 0;
         setAnimationDirection(walkingFrames);
     }
 
@@ -122,8 +128,8 @@ public class Player extends Sprite {
         if (state.equals(IDLE)) {
             idling();
         }
-        else if (state.equals(RUN)) {
-            running(dt);
+        else if (state.equals(WALK)) {
+            walking(dt);
         }
 
         else if (state.equals(JUMP)) {
@@ -136,7 +142,15 @@ public class Player extends Sprite {
 
     private void updatePosition(float dt) {
         float newXPosition = (float) Math.round(getX() + xVelocity * dt);
+        float newYPosition = (float) Math.round(getY() + yVelocity * dt);
         setX(newXPosition);
+        setY(newYPosition);
+
+        if (getY() < 32.0f) {
+            setY(32.0f);
+            enterWalk();
+
+        }
 
     }
 
@@ -154,13 +168,24 @@ public class Player extends Sprite {
 
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             facingRight = false;
-            enterRun();
+            enterWalk();
         }
 
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+        else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             facingRight = true;
-            enterRun();
+            enterWalk();
         }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            enterJump();
+        }
+    }
+
+    private void enterJump() {
+        animationTimer = System.currentTimeMillis();
+        state = JUMP;
+        yVelocity = INITIAL_JUMP_VELOCITY;
+        setAnimationDirection(jumpingFrames);
     }
 
     private void handleIdleAnimation() {
@@ -169,9 +194,12 @@ public class Player extends Sprite {
 
     }
 
-    private void running(float dt) {
-        handleRunAnimation();
+    private void walking (float dt) {
+        handleWalkAnimation();
+        checkInputDuringWalk();
+    }
 
+    private void checkInputDuringWalk() {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             if (!facingRight) {
                 facingRight = true;
@@ -183,9 +211,7 @@ public class Player extends Sprite {
             }
             else {
                 xVelocity += NORMAL_ACCELERATION;
-
             }
-
         }
 
         else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
@@ -200,11 +226,23 @@ public class Player extends Sprite {
             else {
                 xVelocity -= NORMAL_ACCELERATION;
             }
-
         }
 
         else {
-            if (facingRight) {
+            applyGroundFriction();
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            enterJump();
+        }
+
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            enterIdle();
+        }
+    }
+
+    private void applyGroundFriction() {
+        if (facingRight) {
                 if (xVelocity > 0) {
                     xVelocity -= GROUND_DECELERATION;
                 }
@@ -220,17 +258,9 @@ public class Player extends Sprite {
                     enterIdle();
                 }
             }
-        }
-
-
-
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            enterIdle();
-        }
-
     }
 
-    private void handleRunAnimation() {
+    private void handleWalkAnimation() {
         long currentTime = System.currentTimeMillis();
         long elaspsedTime = currentTime - animationTimer;
         int numberOfFrames = animationFrames.size();
@@ -254,9 +284,49 @@ public class Player extends Sprite {
 
 
 
+    private void jumping() {
+        handleJumpAnimation();
+        yVelocity -= GRAVITY;
+        checkInputDuringJump();
+    }
 
 
-    private void jumping() {}
+
+    private void checkInputDuringJump() {
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            if (!facingRight) {
+                facingRight = true;
+                setAnimationDirection(jumpingFrames);
+            }
+
+            if (xVelocity > MAX_XVELOCITY) {
+                xVelocity = MAX_XVELOCITY;
+            }
+            else {
+                xVelocity += NORMAL_ACCELERATION;
+            }
+        }
+
+        else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            if (facingRight) {
+                facingRight = false;
+                setAnimationDirection(jumpingFrames);
+            }
+
+            if (xVelocity < MAX_XVELOCITY * -1) {
+                xVelocity = MAX_XVELOCITY * -1;
+            }
+            else {
+                xVelocity -= NORMAL_ACCELERATION;
+            }
+        }
+    }
+
+    private void handleJumpAnimation() {
+        int frameIndex = 0;
+        currentFrame = animationFrames.get(frameIndex);
+
+    }
 
     public void disposeTextures() {
         sheet.dispose();
