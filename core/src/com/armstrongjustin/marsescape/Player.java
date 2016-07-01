@@ -11,6 +11,12 @@ import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import States.CrouchState;
+import States.IdleState;
+import States.JumpState;
+import States.State;
+import States.WalkState;
+
 public class Player extends Sprite {
 
     final String IDLE = "idle";
@@ -20,31 +26,32 @@ public class Player extends Sprite {
     final String PLAYER_SHEET = "playerSheet.png";
     final String RIGHT = "right";
     final String LEFT = "left";
-    final int NORMAL_ACCELERATION = 20;
-    final float GROUND_DECELERATION = 10f;
-    final int MAX_XVELOCITY = 400;
-    final int INITIAL_JUMP_VELOCITY = 400;
-    final float GRAVITY = 15f;
+    final public int NORMAL_ACCELERATION = 20;
+    final public float GROUND_DECELERATION = 10f;
+    final public int MAX_XVELOCITY = 400;
+    final public int INITIAL_JUMP_VELOCITY = 400;
+    final public float GRAVITY = -15f;
 
     ArrayList<TextureRegion> animationFrames = new ArrayList<TextureRegion>();
     HashMap<String, ArrayList<TextureRegion>> idleFrames = new HashMap<String, ArrayList<TextureRegion>>();
     HashMap<String, ArrayList<TextureRegion>> walkFrames = new HashMap<String, ArrayList<TextureRegion>>();
     HashMap<String, ArrayList<TextureRegion>> jumpframes = new HashMap<String, ArrayList<TextureRegion>>();
     HashMap<String, ArrayList<TextureRegion>> crouchFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    HashMap<String, State> stateMap = new HashMap<String, State>();
 
     private TextureRegion currentFrame;
-    private Boolean facingRight;
+    public Boolean facingRight;
     public float xVelocity;
     public float yVelocity;
     private int frameIndex = 0;
     private long animationTimer = 0;
-    public String state;
+    private State state;
 
     public Player (Vector2 startLocation) {
         setPosition(startLocation.x, startLocation.y);
         facingRight = true;
         makeAnimationFrames();
-        enterIdle();
+        state = new IdleState(this, idleFrames);
     }
 
     private void makeAnimationFrames(){
@@ -72,11 +79,13 @@ public class Player extends Sprite {
     }
 
     private HashMap<String, ArrayList<TextureRegion>> makeWalkFramesMap(Texture sheet) {
-        TextureRegion walk0 = new TextureRegion(sheet, 32, 0, 32, 32);
-        TextureRegion walk1 = new TextureRegion(sheet, 64, 0, 32, 32);
+        TextureRegion walk0 = new TextureRegion(sheet, 0, 0, 32, 32);
+        TextureRegion walk1 = new TextureRegion(sheet, 32, 0, 32, 32);
+        TextureRegion walk2 = new TextureRegion(sheet, 64, 0, 32, 32);
         ArrayList<TextureRegion> rightWalkFrames = new ArrayList<TextureRegion>();
         rightWalkFrames.add(walk0);
         rightWalkFrames.add(walk1);
+        rightWalkFrames.add(walk2);
         ArrayList<TextureRegion> leftWalkFrames = makeFlippedFrameList(rightWalkFrames);
         HashMap<String, ArrayList<TextureRegion>> frameMap = new HashMap<String, ArrayList<TextureRegion>>();
         frameMap.put(RIGHT, rightWalkFrames);
@@ -122,21 +131,15 @@ public class Player extends Sprite {
         return flippedList;
     }
 
-
-    private void enterIdle() {
-        state = IDLE;
-        xVelocity = 0;
-        yVelocity = 0;
-        setAnimationDirection(idleFrames);
+    public void setXVelocity(float newXVelocity) {
+        xVelocity = newXVelocity;
     }
 
-    private void enterWalk() {
-        state = WALK;
-        yVelocity = 0;
-        setAnimationDirection(walkFrames);
+    public void setYVelocity(float newYVelocity) {
+        yVelocity = newYVelocity;
     }
 
-    private void setAnimationDirection(HashMap<String, ArrayList<TextureRegion>> frameMap) {
+    public void setAnimationDirection(HashMap<String, ArrayList<TextureRegion>> frameMap) {
         frameIndex = 0;
         animationTimer = System.currentTimeMillis();
 
@@ -152,26 +155,30 @@ public class Player extends Sprite {
 
 
     public void update(float dt) {
-        if (state.equals(IDLE)) {
-            idling();
-        }
-        else if (state.equals(WALK)) {
-            walking();
-        }
-
-        else if (state.equals(JUMP)) {
-            jumping();
+        String newState = state.update(this);
+        String newState2 = updatePosition(dt);
+        if (!(newState2.equals(state.name))) {
+            newState = newState2;
         }
 
-        else if (state.equals(CROUCH)) {
-            crouching();
+
+        if(!newState.equals(state.name)) {
+            if (newState.equals(IDLE)) {
+                state = new IdleState(this, idleFrames);
+            }
+            else if (newState.equals(WALK)) {
+                state = new WalkState(this, walkFrames);
+            }
+            else if (newState.equals(CROUCH)) {
+                state = new CrouchState(this, crouchFrames);
+            }
+            else if (newState.equals(JUMP)) {
+                state = new JumpState(this, jumpframes);
+            }
         }
-
-        updatePosition(dt);
-
     }
 
-    private void updatePosition(float dt) {
+    private String updatePosition(float dt) {
         float newXPosition = (float) Math.round(getX() + xVelocity * dt);
         float newYPosition = (float) Math.round(getY() + yVelocity * dt);
         setX(newXPosition);
@@ -179,9 +186,10 @@ public class Player extends Sprite {
 
         if (getY() < 32.0f) {
             setY(32.0f);
-            enterWalk();
-
+            return WALK;
         }
+
+        return state.name;
 
     }
 
@@ -194,132 +202,16 @@ public class Player extends Sprite {
         batch.draw(currentFrame, xPos, yPos);
     }
 
-    private void idling() {
-        handleIdleAnimation();
 
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            facingRight = false;
-            enterWalk();
-        }
-
-        else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            facingRight = true;
-            enterWalk();
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            enterJump();
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            enterCrouch();
-        }
-    }
-
-    private void enterCrouch() {
-        state = CROUCH;
-        setAnimationDirection(crouchFrames);
-    }
-
-    private void enterJump() {
-        state = JUMP;
-        yVelocity = INITIAL_JUMP_VELOCITY;
-        setAnimationDirection(jumpframes);
-    }
-
-    private void handleIdleAnimation() {
-        int frameIndex = 0;
-        currentFrame = animationFrames.get(frameIndex);
-    }
-
-    private void handleCrouchAnimation() {
-        int frameIndex = 0;
-        currentFrame = animationFrames.get(frameIndex);
-    }
-
-    private void walking () {
-        handleWalkAnimation();
-        checkInputDuringWalk();
-        checkIfStopped();
-    }
-
-    private void checkIfStopped() {
+    public String checkIfStopped() {
         if (xVelocity == 0) {
-            enterIdle();
+            return IDLE;
         }
+        return state.name;
     }
 
-    private void crouching () {
-        handleCrouchAnimation();
-        checkInputDuringCrouch();
-        applyGroundFriction();
-    }
 
-    private void checkInputDuringCrouch() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            if (!facingRight) {
-                facingRight = true;
-                setAnimationDirection(crouchFrames);
-            }
-            enterWalk();
-        }
-        else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            if (facingRight) {
-                facingRight = false;
-                setAnimationDirection(crouchFrames);
-            }
-            enterWalk();
-        }
-
-        else if (!(Gdx.input.isKeyPressed(Input.Keys.DOWN))) {
-            enterIdle();
-        }
-
-    }
-
-    private void checkInputDuringWalk() {
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            if (!facingRight) {
-                facingRight = true;
-                setAnimationDirection(walkFrames);
-            }
-
-            if (xVelocity > MAX_XVELOCITY) {
-                xVelocity = MAX_XVELOCITY;
-            }
-            else {
-                xVelocity += NORMAL_ACCELERATION;
-            }
-        }
-
-        else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            if (facingRight) {
-                facingRight = false;
-                setAnimationDirection(walkFrames);
-            }
-
-            if (xVelocity < MAX_XVELOCITY * -1) {
-                xVelocity = MAX_XVELOCITY * -1;
-            }
-            else {
-                xVelocity -= NORMAL_ACCELERATION;
-            }
-        }
-
-        else {
-            applyGroundFriction();
-        }
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
-            enterJump();
-        }
-
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-            enterCrouch();
-        }
-    }
-
-    private void applyGroundFriction() {
+    public void applyGroundFriction() {
         if (facingRight) {
                 if (xVelocity > 0) {
                     xVelocity -= GROUND_DECELERATION;
@@ -338,7 +230,7 @@ public class Player extends Sprite {
             }
     }
 
-    private void handleWalkAnimation() {
+    public void handleAnimation() {
         long currentTime = System.currentTimeMillis();
         long elaspsedTime = currentTime - animationTimer;
         int numberOfFrames = animationFrames.size();
@@ -346,65 +238,25 @@ public class Player extends Sprite {
         int timeBetweenFrames = 100;
 
         if (elaspsedTime >= timeBetweenFrames) {
-            if (frameIndex >= (numberOfFrames-1)) {
+            if (frameIndex >= (numberOfFrames - 1)) {
                 frameIndex = 0;
-            }
-            else {
+            } else {
                 frameIndex++;
             }
 
             animationTimer = currentTime;
             currentFrame = animationFrames.get(frameIndex);
         }
-
-
     }
 
-
-
-    private void jumping() {
-        handleJumpAnimation();
-        yVelocity -= GRAVITY;
-        checkInputDuringJump();
+    public void accelerateX (float acceleration) {
+        xVelocity += acceleration;
     }
 
-
-
-    private void checkInputDuringJump() {
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-            if (!facingRight) {
-                facingRight = true;
-                setAnimationDirection(jumpframes);
-            }
-
-            if (xVelocity > MAX_XVELOCITY) {
-                xVelocity = MAX_XVELOCITY;
-            }
-            else {
-                xVelocity += NORMAL_ACCELERATION;
-            }
-        }
-
-        else if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-            if (facingRight) {
-                facingRight = false;
-                setAnimationDirection(jumpframes);
-            }
-
-            if (xVelocity < MAX_XVELOCITY * -1) {
-                xVelocity = MAX_XVELOCITY * -1;
-            }
-            else {
-                xVelocity -= NORMAL_ACCELERATION;
-            }
-        }
+    public void accelerateY (float acceleration) {
+        yVelocity += acceleration;
     }
 
-    private void handleJumpAnimation() {
-        int frameIndex = 0;
-        currentFrame = animationFrames.get(frameIndex);
-
-    }
 
     public void disposeTextures() {
     }
