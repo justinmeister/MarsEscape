@@ -1,7 +1,5 @@
 package com.armstrongjustin.marsescape;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -11,21 +9,19 @@ import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import States.CrouchState;
 import States.IdleState;
-import States.JumpState;
 import States.State;
-import States.WalkState;
 
 public class Player extends Sprite {
 
-    final String IDLE = "idle";
-    final String WALK = "walk";
-    final String JUMP = "jump";
-    final String CROUCH = "crouch";
+    public final String IDLE = "idle";
+    public final String WALK = "walk";
+    public final String JUMP = "jump";
+    public final String CROUCH = "crouch";
     final String PLAYER_SHEET = "playerSheet.png";
     final String RIGHT = "right";
     final String LEFT = "left";
+
     final public int NORMAL_ACCELERATION = 20;
     final public float GROUND_DECELERATION = 10f;
     final public int MAX_XVELOCITY = 400;
@@ -33,10 +29,10 @@ public class Player extends Sprite {
     final public float GRAVITY = -15f;
 
     ArrayList<TextureRegion> animationFrames = new ArrayList<TextureRegion>();
-    HashMap<String, ArrayList<TextureRegion>> idleFrames = new HashMap<String, ArrayList<TextureRegion>>();
-    HashMap<String, ArrayList<TextureRegion>> walkFrames = new HashMap<String, ArrayList<TextureRegion>>();
-    HashMap<String, ArrayList<TextureRegion>> jumpframes = new HashMap<String, ArrayList<TextureRegion>>();
-    HashMap<String, ArrayList<TextureRegion>> crouchFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    public HashMap<String, ArrayList<TextureRegion>> idleFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    public HashMap<String, ArrayList<TextureRegion>> walkFrames = new HashMap<String, ArrayList<TextureRegion>>();
+    public HashMap<String, ArrayList<TextureRegion>> jumpframes = new HashMap<String, ArrayList<TextureRegion>>();
+    public HashMap<String, ArrayList<TextureRegion>> crouchFrames = new HashMap<String, ArrayList<TextureRegion>>();
     HashMap<String, State> stateMap = new HashMap<String, State>();
 
     private TextureRegion currentFrame;
@@ -45,9 +41,11 @@ public class Player extends Sprite {
     public float yVelocity;
     private int frameIndex = 0;
     private long animationTimer = 0;
-    private State state;
+    public State state;
+    private PlayerStateObserver stateManager;
 
     public Player (Vector2 startLocation) {
+        stateManager = new PlayerStateObserver(this);
         setPosition(startLocation.x, startLocation.y);
         facingRight = true;
         makeAnimationFrames();
@@ -155,44 +153,9 @@ public class Player extends Sprite {
 
 
     public void update(float dt) {
-        String newState = state.update(this);
-        String newState2 = updatePosition(dt);
-        if (!(newState2.equals(state.name))) {
-            newState = newState2;
-        }
-
-
-        if(!newState.equals(state.name)) {
-            if (newState.equals(IDLE)) {
-                state = new IdleState(this, idleFrames);
-            }
-            else if (newState.equals(WALK)) {
-                state = new WalkState(this, walkFrames);
-            }
-            else if (newState.equals(CROUCH)) {
-                state = new CrouchState(this, crouchFrames);
-            }
-            else if (newState.equals(JUMP)) {
-                state = new JumpState(this, jumpframes);
-            }
-        }
+        state.update();
+        stateManager.update();
     }
-
-    private String updatePosition(float dt) {
-        float newXPosition = (float) Math.round(getX() + xVelocity * dt);
-        float newYPosition = (float) Math.round(getY() + yVelocity * dt);
-        setX(newXPosition);
-        setY(newYPosition);
-
-        if (getY() < 32.0f) {
-            setY(32.0f);
-            return WALK;
-        }
-
-        return state.name;
-
-    }
-
 
     public void render(Batch batch, float dt) {
 
@@ -202,7 +165,6 @@ public class Player extends Sprite {
         batch.draw(currentFrame, xPos, yPos);
     }
 
-
     public String checkIfStopped() {
         if (xVelocity == 0) {
             return IDLE;
@@ -210,25 +172,6 @@ public class Player extends Sprite {
         return state.name;
     }
 
-
-    public void applyGroundFriction() {
-        if (facingRight) {
-                if (xVelocity > 0) {
-                    xVelocity -= GROUND_DECELERATION;
-                }
-                else {
-                    xVelocity = 0;
-                }
-            }
-            else {
-                if (xVelocity < 0) {
-                    xVelocity += GROUND_DECELERATION;
-                }
-                else {
-                    xVelocity = 0;
-                }
-            }
-    }
 
     public void handleAnimation() {
         long currentTime = System.currentTimeMillis();

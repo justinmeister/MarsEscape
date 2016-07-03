@@ -16,13 +16,13 @@ public class CrouchState extends State {
     }
 
     @Override
-    protected void enter(Player player) {
+    protected void enter() {
         player.setAnimationDirection(frameMap);
 
     }
 
     @Override
-    protected String handleInput(Player player) {
+    protected String handleInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
             if (!player.facingRight) {
                 player.facingRight = true;
@@ -40,14 +40,12 @@ public class CrouchState extends State {
             return IDLE;
         }
 
-        player.applyGroundFriction();
-
         return name;
     }
 
     @Override
-    public String update(Player player) {
+    public String update() {
         player.handleAnimation();
-        return handleInput(player);
+        return handleInput();
     }
 }

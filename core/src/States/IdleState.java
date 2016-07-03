@@ -15,21 +15,21 @@ public class IdleState extends State {
     }
 
     @Override
-    protected void enter(Player player) {
+    protected void enter() {
         player.setXVelocity(0);
         player.setYVelocity(0);
         player.setAnimationDirection(frameMap);
     }
 
     @Override
-    public String update(Player player) {
+    public String update() {
         player.handleAnimation();
-        return handleInput(player);
+        return handleInput();
 
     }
 
     @Override
-    protected String handleInput(Player player) {
+    protected String handleInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             player.facingRight = false;
             return WALK;

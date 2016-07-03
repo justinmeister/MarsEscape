@@ -13,13 +13,16 @@ public abstract class State {
     final String CROUCH = "crouch";
     public String name;
     HashMap<String, ArrayList<TextureRegion>> frameMap;
+    Player player;
+
 
     public State (Player player, HashMap<String, ArrayList<TextureRegion>> frameMap) {
         this.frameMap = frameMap;
-        enter(player);
+        this.player = player;
+        enter();
     }
 
-    protected abstract void enter(Player player);
-    protected abstract String handleInput(Player player);
-    public abstract String update(Player player);
+    protected abstract void enter();
+    protected abstract String handleInput();
+    public abstract String update();
 }

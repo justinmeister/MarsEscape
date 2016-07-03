@@ -16,13 +16,13 @@ public class WalkState extends State {
     }
 
     @Override
-    protected void enter(Player player) {
+    protected void enter() {
         player.setAnimationDirection(frameMap);
         player.accelerateX(player.NORMAL_ACCELERATION);
     }
 
     @Override
-    protected String handleInput(Player player) {
+    protected String handleInput() {
         float maxXVelocity = player.MAX_XVELOCITY;
         String newState = name;
 
@@ -73,8 +73,8 @@ public class WalkState extends State {
     }
 
     @Override
-    public String update(Player player) {
+    public String update() {
         player.handleAnimation();
-        return handleInput(player);
+        return handleInput();
     }
 }
